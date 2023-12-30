@@ -1,0 +1,21 @@
+#!/bin/bash
+export STEAM_COMPAT_DATA_PATH=~/.local/share/proton-cli/data/default
+export STEAM_COMPAT_CLIENT_INSTALL_PATH=~/.local/share/proton-cli/data/default
+
+mkdir -p $STEAM_COMPAT_DATA_PATH
+
+xdg-mime default proton.desktop application/x-ms-dos-executable
+
+/opt/proton/proton run "$1"
+
+rm -rf ~/.local/share/applications/proton-cli
+mkdir  ~/.local/share/applications/proton-cli
+mkdir ~/.icons
+
+for filename in $STEAM_COMPAT_DATA_PATH/pfx/drive_c/proton_shortcuts/*.desktop; do
+    COMM_EXEC=$(cat "$filename" | grep -oP "Exec=\K.*" | sed 's/\\\\\\\\/\//g' | sed 's/C:\//proton ~\/.local\/share\/proton-cli\/data\/default\/pfx\/drive_c\//g')
+    BASEFILE=$(basename "$filename")
+    cat "$filename" | sed -r '/Exec=/c\Exec='"$COMM_EXEC" > ~/.local/share/applications/proton-cli/"$BASEFILE"
+done
+find ~/.local/share/proton-cli/data/default/pfx/drive_c/proton_shortcuts/icons -type f -exec cp -t ~/.icons {} +
+update-desktop-database ~/.local/share/applications

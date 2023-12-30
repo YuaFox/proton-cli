@@ -1,0 +1,5 @@
+Package: proton-cli
+Version: 8.0-4-2
+Maintainer: YuaFox
+Architecture: amd64
+Description: Proton
