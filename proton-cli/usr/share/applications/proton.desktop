@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Proton
 Comment=Proton
-Exec=bash /bin/proton
+Exec=/bin/proton %u
 Type=Application
 Categories=Utility
 MimeType=application/x-ms-dos-executable

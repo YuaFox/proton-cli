@@ -1,21 +1,44 @@
-#!/bin/bash
-export STEAM_COMPAT_DATA_PATH=~/.local/share/proton-cli/data/default
-export STEAM_COMPAT_CLIENT_INSTALL_PATH=~/.local/share/proton-cli/data/default
+#!/usr/bin/env python3
 
-mkdir -p $STEAM_COMPAT_DATA_PATH
+import os, subprocess, argparse
 
-xdg-mime default proton.desktop application/x-ms-dos-executable
+parser = argparse.ArgumentParser(
+                    prog='proton-cli',
+                    description='Proton wrapper')
 
-/opt/proton/proton run "$1"
+parser.add_argument("-n", "--name")
+parser.add_argument("exe")
 
-rm -rf ~/.local/share/applications/proton-cli
-mkdir  ~/.local/share/applications/proton-cli
-mkdir ~/.icons
+args = vars(parser.parse_args())
+    
+def createPatchedPrefix(folder):
+    if not os.path.isdir(folder):
+        print("Creating prefix...")
+        subprocess.Popen(['cp', '-r', "/opt/proton/default_pfx_base", folder]).wait()
+        print("Linking drive...")
+        subprocess.Popen(['ln', '-s', os.getenv("HOME")+"/.local/share/proton-cli/data/default/pfx/drive_c", folder+"/pfx/drive_c"]).wait()
+        print("OK!")
 
-for filename in $STEAM_COMPAT_DATA_PATH/pfx/drive_c/proton_shortcuts/*.desktop; do
-    COMM_EXEC=$(cat "$filename" | grep -oP "Exec=\K.*" | sed 's/\\\\\\\\/\//g' | sed 's/C:\//proton ~\/.local\/share\/proton-cli\/data\/default\/pfx\/drive_c\//g')
-    BASEFILE=$(basename "$filename")
-    cat "$filename" | sed -r '/Exec=/c\Exec='"$COMM_EXEC" > ~/.local/share/applications/proton-cli/"$BASEFILE"
-done
-find ~/.local/share/proton-cli/data/default/pfx/drive_c/proton_shortcuts/icons -type f -exec cp -t ~/.icons {} +
-update-desktop-database ~/.local/share/applications
+def runProton(name, exe):
+    params = dict(os.environ)
+
+    params["DIST_FOLDER"] = "dist"
+    params["STEAM_COMPAT_DATA_PATH"] = os.getenv("HOME")+"/.local/share/proton-cli/data/default"
+
+    if not os.path.isdir(params["STEAM_COMPAT_DATA_PATH"]):
+        os.makedirs(params["STEAM_COMPAT_DATA_PATH"])
+    
+    if name == "League of Legends":
+        params["DIST_FOLDER"] = "dist-lol"
+        # TODO: Use different prefix with same drive but it doesnt work :/
+        #params["STEAM_COMPAT_DATA_PATH"] = os.getenv("HOME")+"/.local/share/proton-cli/data/default-lol"
+        #createPatchedPrefix(params["STEAM_COMPAT_DATA_PATH"])
+
+
+    params["STEAM_COMPAT_CLIENT_INSTALL_PATH"] = params["STEAM_COMPAT_DATA_PATH"]
+    subprocess.Popen(['/opt/proton/proton', 'run', exe], env=params)
+
+if __name__ == "__main__":
+    runProton(args["name"], args["exe"])
+    # TODO: Only one watcher
+    subprocess.Popen(['proton-watch'])

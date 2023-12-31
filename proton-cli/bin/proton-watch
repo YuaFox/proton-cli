@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+import os
+import time
+import re
+import subprocess
+
+folder = os.getenv("HOME")+"/.local/share/proton-cli/data/default/pfx/drive_c/proton_shortcuts"
+originalTime = os.path.getmtime(folder)
+
+def convertFile(f_original):
+    data = ""
+    with open(f_original) as f:
+        data = f.read()
+    name = re.search("(?<=Name=).*", data).group(0)
+    exec_command = re.search("(?<=Exec=).*", data).group(0)
+    exec_command = exec_command.replace("\\\\\\\\", "/") \
+            .replace("\\\\", "\\") \
+            .replace("C:/", "proton --name \""+name+"\" "+os.getenv("HOME")+"/.local/share/proton-cli/data/default/pfx/drive_c/")
+    
+    data = re.sub('(?<=Exec=).*', exec_command, data)
+
+    base_dir = os.getenv("HOME")+"/.local/share/applications/proton-cli"
+    f_new = os.path.basename(f_original)
+
+    if not os.path.isdir(base_dir):
+        os.makedirs(base_dir)
+
+    with open(base_dir+"/"+f_new, "w") as f:
+        f.write(data)
+    subprocess.Popen(['chmod', 'a+x', base_dir+"/"+f_new]).wait()
+    subprocess.Popen(['gio', 'set', base_dir+"/"+f_new, 'metadata::trusted', 'true']).wait()
+
+def parseFiles():
+    for filename in os.listdir(folder):
+        f = os.path.join(folder, filename)
+        # checking if it is a file
+        if os.path.isfile(f):
+            print(f)
+            convertFile(f)
+
+    if not os.path.isdir(os.getenv("HOME")+'/.icons'):
+        os.makedirs(os.getenv("HOME")+'/.icons')
+    subprocess.Popen(['find', os.getenv("HOME")+'/.local/share/proton-cli/data/default/pfx/drive_c/proton_shortcuts/icons', '~', '-type', 'f', '-exec', 'cp', '-t', os.getenv("HOME")+'/.icons', '{}', '+']).wait()
+    subprocess.Popen(['update-desktop-database', os.getenv("HOME")+'/.local/share/applications']).wait()
+     
+
+parseFiles()
+
+while(True):
+    if(os.path.getmtime(folder) > originalTime):
+        parseFiles()
+        
+        originalTime = os.path.getmtime(folder)
+    time.sleep(5)
+
